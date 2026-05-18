@@ -1,0 +1,17 @@
+{
+  "name": "tcn-complaint-management",
+  "version": "1.0.0",
+  "description": "TCN Cable Network Complaint Management System",
+  "main": "index.js",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:all": "npm run install:backend && npm run install:frontend"
+  },
+  "keywords": ["complaint-management", "cable-network", "tcn"],
+  "author": "",
+  "license": "ISC"
+}
+
