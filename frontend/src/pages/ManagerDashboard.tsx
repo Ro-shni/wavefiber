@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '../store/authStore'
 import { dashboardApi } from '../api/dashboard'
 import { settingsApi } from '../api/settings'
 import { complaintsApi } from '../api/complaints'
@@ -22,6 +23,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 
 export default function ManagerDashboard() {
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
+
+  const getGreeting = () => {
+    const hour = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata", hour: "numeric", hour12: false});
+    const currentHour = parseInt(hour, 10);
+    if (currentHour < 12) return 'Good Morning';
+    if (currentHour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
 
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ['manager-stats'],
@@ -72,34 +82,18 @@ export default function ManagerDashboard() {
 
   return (
     <Layout title="Manager Dashboard">
-      {/* Auto-Assignment Toggle */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg p-6 mb-8 text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            {settings.autoAssignEnabled ? (
-              <PlayCircle className="w-8 h-8" />
-            ) : (
-              <PauseCircle className="w-8 h-8" />
-            )}
-            <div>
-              <h3 className="text-xl font-bold">Auto-Assignment Engine</h3>
-              <p className="text-blue-100 text-sm">
-                {settings.autoAssignEnabled
-                  ? 'Complaints are being automatically assigned to technicians'
-                  : 'Auto-assignment is currently paused'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => toggleAutoAssignMutation.mutate(!settings.autoAssignEnabled)}
-            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-              settings.autoAssignEnabled
-                ? 'bg-white text-blue-600 hover:bg-blue-50'
-                : 'bg-green-500 text-white hover:bg-green-600'
-            }`}
-          >
-            {settings.autoAssignEnabled ? 'Pause Assignment' : 'Resume Assignment'}
-          </button>
+      {/* Welcome Banner */}
+      <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 sm:p-8 border border-blue-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            {getGreeting()}, <span className="text-blue-700">{user?.name || 'Manager'}</span>! 👋
+          </h2>
+          <p className="text-slate-600 mt-2">Here is your network's performance overview for today.</p>
+        </div>
+        <div className="sm:text-right bg-white/60 px-4 py-2 rounded-xl border border-white backdrop-blur-sm self-start sm:self-auto">
+          <p className="text-sm font-semibold text-slate-700">
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Kolkata' })}
+          </p>
         </div>
       </div>
 

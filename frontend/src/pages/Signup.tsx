@@ -13,8 +13,9 @@ export default function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [role, setRole] = useState<'customer' | 'technician'>('customer')
   
-  // Customer fields (optional initially)
+  // Dynamic fields
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [block, setBlock] = useState('')
@@ -54,8 +55,16 @@ export default function Signup() {
       return
     }
 
-    // Phone validation if provided
-    if (phone && phone.length !== 10) {
+    if (role === 'technician') {
+      if (!phone || phone.length !== 10) {
+        toast.error('Phone number (10 digits) is required for technicians')
+        return
+      }
+      if (!block) {
+        toast.error('Block is required for technicians')
+        return
+      }
+    } else if (phone && phone.length !== 10) {
       toast.error('Phone number must be 10 digits')
       return
     }
@@ -65,7 +74,7 @@ export default function Signup() {
       email,
       password,
       phone: phone || undefined,
-      role: 'customer',
+      role,
       address: address || undefined,
       block: block || undefined,
       vcRId: vcRId || undefined,
@@ -83,6 +92,32 @@ export default function Signup() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Role Selection */}
+            <div className="flex gap-4 p-1 bg-gray-100 rounded-lg mb-6">
+              <button
+                type="button"
+                onClick={() => setRole('customer')}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                  role === 'customer' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Customer
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('technician')}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                  role === 'technician' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Technician
+              </button>
+            </div>
+
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -126,10 +161,10 @@ export default function Signup() {
               </p>
             </div>
 
-            {/* Phone (Optional) */}
+            {/* Phone */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number (Optional)
+                Phone Number {role === 'technician' ? <span className="text-red-500">*</span> : '(Optional)'}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -142,18 +177,16 @@ export default function Signup() {
                   placeholder="10-digit phone number"
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   maxLength={10}
+                  required={role === 'technician'}
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Required before filing complaints. Can be added later in profile.
-              </p>
             </div>
 
-            {/* Customer-specific fields (Optional) */}
+            {/* Conditional fields for Customer / Technician */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Block (Optional)
+                  Block {role === 'technician' ? <span className="text-red-500">*</span> : '(Optional)'}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -165,41 +198,46 @@ export default function Signup() {
                     onChange={(e) => setBlock(e.target.value)}
                     placeholder="e.g., A1, B2"
                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={role === 'technician'}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  VC R ID (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={vcRId}
-                  onChange={(e) => setVcRId(e.target.value)}
-                  placeholder="VC1001"
-                  className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              {role === 'customer' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    VC R ID (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={vcRId}
+                    onChange={(e) => setVcRId(e.target.value)}
+                    placeholder="VC1001"
+                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Address (Optional)
-              </label>
-              <div className="relative">
-                <div className="absolute top-3 left-3 pointer-events-none">
-                  <Home className="h-5 w-5 text-gray-400" />
+            {role === 'customer' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Address (Optional)
+                </label>
+                <div className="relative">
+                  <div className="absolute top-3 left-3 pointer-events-none">
+                    <Home className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Enter your full address"
+                    rows={2}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
                 </div>
-                <textarea
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Enter your full address"
-                  rows={2}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
               </div>
-            </div>
+            )}
 
             {/* Password */}
             <div>
