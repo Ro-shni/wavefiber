@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { complaintsApi } from '../api/complaints'
+import { techniciansApi } from '../api/technicians'
 import { useAuthStore } from '../store/authStore'
 import Layout from '../components/Layout'
 import { SimpleCard } from '../components/Card'
@@ -32,10 +33,18 @@ export default function ComplaintDetails() {
   const [usedMaterial, setUsedMaterial] = useState('')
   const [remarks, setRemarks] = useState('')
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
+  const [selectedTechnician, setSelectedTechnician] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['complaint', id],
     queryFn: () => complaintsApi.getById(id!),
+  })
+
+  // Only fetch technicians if user is manager or staff
+  const { data: techniciansData } = useQuery({
+    queryKey: ['technicians'],
+    queryFn: () => techniciansApi.getAll(),
+    enabled: ['manager', 'staff'].includes(user?.role || ''),
   })
 
   const acknowledgeMutation = useMutation({
@@ -55,6 +64,16 @@ export default function ComplaintDetails() {
       }),
     onSuccess: () => {
       toast.success('Complaint closed successfully')
+      queryClient.invalidateQueries({ queryKey: ['complaint', id] })
+      queryClient.invalidateQueries({ queryKey: ['complaints'] })
+    },
+  })
+
+  const reassignMutation = useMutation({
+    mutationFn: (technicianId: string) => complaintsApi.reassign(id!, technicianId),
+    onSuccess: () => {
+      toast.success('Technician assigned successfully')
+      setSelectedTechnician('')
       queryClient.invalidateQueries({ queryKey: ['complaint', id] })
       queryClient.invalidateQueries({ queryKey: ['complaints'] })
     },
@@ -86,6 +105,8 @@ export default function ComplaintDetails() {
   const canAcknowledge = user?.role === 'technician' && complaint.status === 'ASSIGNED'
   const canClose = ['technician', 'manager', 'staff'].includes(user?.role || '') && 
                    ['ASSIGNED', 'IN PROGRESS'].includes(complaint.status)
+  const canReassign = ['manager', 'staff'].includes(user?.role || '') && 
+                      ['OPEN', 'ASSIGNED', 'IN PROGRESS'].includes(complaint.status)
 
   return (
     <Layout title="Complaint Details">
@@ -359,7 +380,7 @@ export default function ComplaintDetails() {
       )}
 
       {/* Actions */}
-      {(canAcknowledge || canClose) && (
+      {(canAcknowledge || canClose || canReassign) && (
         <SimpleCard>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
           
@@ -371,6 +392,35 @@ export default function ComplaintDetails() {
             >
               {acknowledgeMutation.isPending ? 'Acknowledging...' : 'Acknowledge Complaint'}
             </button>
+          )}
+
+          {canReassign && (
+            <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Assign / Reassign Technician
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={selectedTechnician}
+                  onChange={(e) => setSelectedTechnician(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
+                >
+                  <option value="">Select a technician...</option>
+                  {techniciansData?.technicians?.map((tech: any) => (
+                    <option key={tech._id} value={tech._id}>
+                      {tech.name} (Block: {tech.block}) {tech.isAvailable ? '' : '- Unavailable'}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => selectedTechnician && reassignMutation.mutate(selectedTechnician)}
+                  disabled={!selectedTechnician || reassignMutation.isPending}
+                  className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                >
+                  {reassignMutation.isPending ? 'Assigning...' : 'Assign'}
+                </button>
+              </div>
+            </div>
           )}
 
           {canClose && (

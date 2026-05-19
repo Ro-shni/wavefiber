@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Technician from '../models/Technician.js';
 import { OAuth2Client } from 'google-auth-library';
+import { sendNotification } from '../utils/sendNotification.js';
 
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -234,6 +235,19 @@ router.post('/register', async (req, res) => {
         block: block || 'A1',
         userId: user._id
       });
+      
+      // Notify managers about the new technician
+      const managers = await User.find({ role: 'manager' });
+      for (const manager of managers) {
+        await sendNotification(
+          req,
+          manager._id,
+          'New Technician Registered',
+          `A new technician, ${name}, has joined the network for block ${block || 'A1'}.`,
+          'SYSTEM',
+          user._id
+        );
+      }
     }
 
     const token = generateToken(user._id);

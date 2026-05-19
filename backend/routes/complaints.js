@@ -2,6 +2,7 @@ import express from 'express';
 import Complaint from '../models/Complaint.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { assignTechnicianToComplaint } from '../utils/assignTechnician.js';
+import { sendNotification } from '../utils/sendNotification.js';
 import upload from '../middleware/upload.js';
 
 const router = express.Router();
@@ -48,7 +49,16 @@ router.post('/', protect, async (req, res) => {
 
     const populatedComplaint = await Complaint.findById(complaint._id)
       .populate('customerId', 'name phone')
-      .populate('technicianId', 'name phone block');
+      .populate('technicianId', 'name phone block userId');
+
+    // Notify Customer
+    if (populatedComplaint.customerId) {
+      await sendNotification(req, populatedComplaint.customerId._id, 'Complaint Created', `Your complaint (${populatedComplaint.complaintType}) has been registered.`, 'COMPLAINT_UPDATE', populatedComplaint._id);
+    }
+    // Notify assigned Technician
+    if (populatedComplaint.technicianId && populatedComplaint.technicianId.userId) {
+      await sendNotification(req, populatedComplaint.technicianId.userId, 'New Complaint Assigned', `A new complaint (${populatedComplaint.complaintType}) has been assigned to you.`, 'COMPLAINT_UPDATE', populatedComplaint._id);
+    }
 
     res.status(201).json({
       success: true,
@@ -161,6 +171,9 @@ router.patch('/:id/acknowledge', protect, authorize('technician'), async (req, r
     complaint.status = 'IN PROGRESS';
     await complaint.save();
 
+    // Notify Customer
+    await sendNotification(req, complaint.customerId, 'Complaint Acknowledged', `Technician is working on your complaint.`, 'COMPLAINT_UPDATE', complaint._id);
+
     res.json({
       success: true,
       complaint
@@ -208,6 +221,9 @@ router.patch('/:id/close', protect, authorize('technician', 'manager', 'staff'),
     if (remarks) complaint.remarks = remarks;
 
     await complaint.save();
+
+    // Notify Customer
+    await sendNotification(req, complaint.customerId, 'Complaint Closed', `Your complaint has been marked as closed. Please verify.`, 'COMPLAINT_UPDATE', complaint._id);
 
     // Update technician stats
     if (complaint.technicianId) {
@@ -368,6 +384,39 @@ router.post('/:id/upload-voice', protect, upload.single('voiceRecording'), async
     complaint.voiceRecordingUploadedAt = new Date();
 
     await complaint.save();
+
+    // Determine recipient for notification
+    const populatedComplaint = await Complaint.findById(complaint._id).populate('technicianId');
+    const recipientId = req.user.role === 'customer' 
+      ? (populatedComplaint.technicianId ? populatedComplaint.technicianId.userId : null)
+      : populatedComplaint.customerId;
+
+    if (recipientId) {
+      await sendNotification(
+        req, 
+        recipientId, 
+        'New Voice Note', 
+        `${req.user.name} added a voice note to your complaint.`, 
+        'NEW_MESSAGE', 
+        complaint._id
+      );
+    }
+
+    // If customer sent it, also notify managers
+    if (req.user.role === 'customer') {
+      const User = (await import('../models/User.js')).default;
+      const managers = await User.find({ role: 'manager' });
+      for (const manager of managers) {
+        await sendNotification(
+          req,
+          manager._id,
+          'Customer Voice Note',
+          `Customer ${req.user.name} added a voice note.`,
+          'NEW_MESSAGE',
+          complaint._id
+        );
+      }
+    }
 
     res.json({
       success: true,

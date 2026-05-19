@@ -30,6 +30,7 @@ const seedData = async () => {
     // Create Manager
     const manager = await User.create({
       name: 'Roshni Manager',
+      email: 'manager@tcn.com',
       phone: '9999999999',
       password: 'manager123',
       role: 'manager',
@@ -41,6 +42,7 @@ const seedData = async () => {
     // Create Staff
     const staff = await User.create({
       name: 'Uma Staff',
+      email: 'staff@tcn.com',
       phone: '9888888888',
       password: 'staff123',
       role: 'staff',
@@ -86,6 +88,7 @@ const seedData = async () => {
     for (let i = 1; i <= 10; i++) {
       const customer = await User.create({
         name: `Customer ${i}`,
+        email: `customer${i}@tcn.com`,
         phone: `987654${i.toString().padStart(4, '0')}`,
         password: 'customer123',
         role: 'customer',
@@ -98,7 +101,7 @@ const seedData = async () => {
     console.log('✅ Created 10 Sample Customers');
 
     // Create Sample Complaints
-    const complaintTypes = ['NEW CONNECTION', 'NO SIGNAL', 'POOR SIGNAL', 'TECHNICAL ISSUE', 'PAYMENT ISSUE'];
+    const complaintTypes = ['NEWCONNECTION', 'NO SIGNAL', 'WIRE COMPLAINT', 'POWER COMPLAINT', 'Payment Issue'];
     const statuses = ['OPEN', 'ASSIGNED', 'IN PROGRESS', 'CLOSED'];
     
     const technicians = await Technician.find();
@@ -165,12 +168,12 @@ const seedData = async () => {
     console.log('Customer: phone: 9876540001 to 9876540010 / password: customer123');
     console.log('\nAll Technician Emails: rambabu@tcn.com, naveen@tcn.com, suresh@tcn.com, ganesh@tcn.com, ravi@tcn.com, srinivas@tcn.com');
     
-    process.exit(0);
+    // process.exit(0);
   } catch (error) {
     console.error('❌ Seeding Error:', error);
-    process.exit(1);
+    throw error;
   }
 };
 
-connectDB().then(seedData);
+export default seedData;
 

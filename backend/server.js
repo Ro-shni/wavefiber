@@ -15,6 +15,7 @@ import profileRoutes from './routes/profile.js';
 import forgotPasswordRoutes from './routes/forgotPassword.js';
 import pauseTimerRoutes from './routes/pauseTimer.js';
 import chatRoutes from './routes/chat.js';
+import notificationRoutes from './routes/notifications.js';
 
 dotenv.config();
 
@@ -60,6 +61,17 @@ io.on('connection', (socket) => {
     socket.to(`complaint-${complaintId}`).emit('user-stop-typing');
   });
 
+  // User personal room for notifications
+  socket.on('join-user-room', (userId) => {
+    socket.join(`user-${userId}`);
+    console.log(`Socket ${socket.id} joined user-${userId}`);
+  });
+
+  socket.on('leave-user-room', (userId) => {
+    socket.leave(`user-${userId}`);
+    console.log(`Socket ${socket.id} left user-${userId}`);
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}`);
   });
@@ -100,6 +112,7 @@ app.use('/api/leave-requests', leaveRequestRoutes);
 app.use('/api/forgot-password', forgotPasswordRoutes);
 app.use('/api/complaints', pauseTimerRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

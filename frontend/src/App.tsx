@@ -12,6 +12,8 @@ import LeaveApproval from './pages/LeaveApproval'
 import Profile from './pages/Profile'
 import ChatList from './pages/ChatList'
 import ChatPage from './pages/ChatPage'
+import ManagerTechnicians from './pages/ManagerTechnicians'
+import ManagerComplaints from './pages/ManagerComplaints'
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) => {
   const { user, token } = useAuthStore()
@@ -89,6 +91,24 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['manager']}>
               <LeaveApproval />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/manager/technicians"
+          element={
+            <ProtectedRoute allowedRoles={['manager']}>
+              <ManagerTechnicians />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/manager/complaints"
+          element={
+            <ProtectedRoute allowedRoles={['manager']}>
+              <ManagerComplaints />
             </ProtectedRoute>
           }
         />

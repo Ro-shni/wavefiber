@@ -1,8 +1,10 @@
 import express from 'express';
 import Message from '../models/Message.js';
 import Complaint from '../models/Complaint.js';
+import User from '../models/User.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
+import { sendNotification } from '../utils/sendNotification.js';
 
 const router = express.Router();
 
@@ -75,6 +77,38 @@ router.post('/:complaintId/messages', protect, async (req, res) => {
       io.to(`complaint-${req.params.complaintId}`).emit('new-message', message);
     }
 
+    // Send Notification
+    const populatedComplaint = await Complaint.findById(complaint._id).populate('technicianId');
+    const recipientId = req.user.role === 'customer' 
+      ? (populatedComplaint.technicianId ? populatedComplaint.technicianId.userId : null)
+      : populatedComplaint.customerId;
+
+    if (recipientId) {
+      await sendNotification(
+        req, 
+        recipientId, 
+        'New Message', 
+        `You have a new message from ${req.user.name} regarding complaint ${populatedComplaint.complaintType}.`, 
+        'NEW_MESSAGE', 
+        complaint._id
+      );
+    }
+
+    // If customer sent the message, also notify all Managers
+    if (req.user.role === 'customer') {
+      const managers = await User.find({ role: 'manager' });
+      for (const manager of managers) {
+        await sendNotification(
+          req,
+          manager._id,
+          'Customer Message',
+          `Customer ${req.user.name} sent a message regarding complaint ${populatedComplaint.complaintType}.`,
+          'NEW_MESSAGE',
+          complaint._id
+        );
+      }
+    }
+
     res.status(201).json({ success: true, message });
   } catch (error) {
     console.error('Send message error:', error);
@@ -114,6 +148,38 @@ router.post('/:complaintId/voice-message', protect, upload.single('voiceRecordin
     const io = req.app.get('io');
     if (io) {
       io.to(`complaint-${req.params.complaintId}`).emit('new-message', message);
+    }
+
+    // Send Notification
+    const populatedComplaint = await Complaint.findById(complaint._id).populate('technicianId');
+    const recipientId = req.user.role === 'customer' 
+      ? (populatedComplaint.technicianId ? populatedComplaint.technicianId.userId : null)
+      : populatedComplaint.customerId;
+
+    if (recipientId) {
+      await sendNotification(
+        req, 
+        recipientId, 
+        'New Voice Message', 
+        `You have a new voice message from ${req.user.name}.`, 
+        'NEW_MESSAGE', 
+        complaint._id
+      );
+    }
+
+    // If customer sent the message, also notify all Managers
+    if (req.user.role === 'customer') {
+      const managers = await User.find({ role: 'manager' });
+      for (const manager of managers) {
+        await sendNotification(
+          req,
+          manager._id,
+          'Customer Voice Message',
+          `Customer ${req.user.name} sent a voice message.`,
+          'NEW_MESSAGE',
+          complaint._id
+        );
+      }
     }
 
     res.status(201).json({ success: true, message });
